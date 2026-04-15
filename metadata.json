@@ -1,0 +1,6 @@
+{
+  "name": "TEM Flight Operations Safety Analysis",
+  "description": "Automated Threat and Error Management (TEM) framework processor for flight training observations. Analyzes flight notes to identify Threats, Errors, and Undesired Aircraft States (UAS) with visual evidence mapping.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
