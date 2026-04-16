@@ -59,7 +59,7 @@ export default function App() {
 
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: `Analyze the following flight training notes and identify Threats, Errors, and Undesired Aircraft States (UAS) based on the Threat and Error Management (TEM) framework.
         
         Notes:
@@ -140,7 +140,7 @@ export default function App() {
 
       // 2. Analyze with Gemini
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: `Analyze the following flight training notes and identify Threats, Errors, and Undesired Aircraft States (UAS) based on the Threat and Error Management (TEM) framework.
         
         Notes:
