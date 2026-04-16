@@ -43,6 +43,10 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadSampleData = async () => {
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'undefined') {
+      setError('Gemini API Key is missing. Please ensure GEMINI_API_KEY is set in your Render environment variables and RE-DEPLOY the app.');
+      return;
+    }
     setIsAnalyzing(true);
     setFile({ name: 'Sample_Flight_Narrative.docx' } as File);
     const sampleText = `Flight training session started at 0900. During cockpit prep, the maintenance placard was still on the pedestal while the engineer was finishing a tire change. This caused a 10-minute delay. 
@@ -115,6 +119,10 @@ export default function App() {
   };
 
   const processFile = async (file: File) => {
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'undefined') {
+      setError('Gemini API Key is missing. Please ensure GEMINI_API_KEY is set in your Render environment variables and RE-DEPLOY the app.');
+      return;
+    }
     setIsAnalyzing(true);
     try {
       // 1. Extract text via backend
