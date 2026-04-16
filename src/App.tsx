@@ -276,7 +276,7 @@ export default function App() {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-3 mx-auto"
                 >
                   <FileText className="w-5 h-5" />
-                  Select Narrative 1.docx
+                  Upload_file
                 </button>
 
                 <div className="mt-8 pt-8 border-t border-slate-100">
@@ -305,7 +305,7 @@ export default function App() {
                 <div>
                   <h3 className="font-bold text-slate-800">Document: {file.name}</h3>
                   <p className="text-sm text-slate-500">
-                    {isAnalyzing ? 'Analyzing with detailed evidence and findings...' : 'Analysis completed across flight phases.'}
+                    {isAnalyzing ? 'Analyzing with detailed evidence and findings...' : 'Analysis completed.'}
                   </p>
                 </div>
               </div>
@@ -326,7 +326,7 @@ export default function App() {
                 <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
                 <div className="space-y-1">
                   <p className="text-lg font-semibold text-slate-700">Processing TEM Framework...</p>
-                  <p className="text-sm text-slate-500">Cross-referencing observations with school SOPs and manuals.</p>
+                  <p className="text-sm text-slate-500">Cross-referencing observations with SOPs and manuals.</p>
                 </div>
               </div>
             ) : (
@@ -339,7 +339,7 @@ export default function App() {
                 <div className="flex flex-wrap items-center gap-4">
                   {[
                     { id: 'Threat', label: 'THREATS', count: stats.Threat, color: 'blue', icon: ShieldAlert },
-                    { id: 'Error', label: 'ERRORS', count: stats.Error, color: 'amber', icon: AlertTriangle },
+                    { id: 'Error', label: 'ERRORS', count: stats.Error, color: 'yellow', icon: AlertTriangle },
                     { id: 'UAS', label: 'UAS', count: stats.UAS, color: 'red', icon: XCircle },
                   ].map((tab) => (
                     <button
@@ -349,7 +349,7 @@ export default function App() {
                         "flex items-center gap-3 px-6 py-3 rounded-xl font-bold transition-all border-2",
                         activeTab === tab.id 
                           ? `bg-${tab.color}-600 border-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-100`
-                          : `bg-white border-slate-200 text-slate-600 hover:border-${tab.color}-300`
+                          : `bg-white border-slate-200 text-slate-600 hover:border-${tab.color}-300 hover:bg-${tab.color}-50`
                       )}
                     >
                       <tab.icon className="w-5 h-5" />
@@ -382,7 +382,7 @@ export default function App() {
                               <span className={cn(
                                 "text-[10px] font-bold px-2 py-1 rounded tracking-widest uppercase",
                                 activeTab === 'Threat' ? "bg-blue-50 text-blue-600" :
-                                activeTab === 'Error' ? "bg-amber-50 text-amber-600" :
+                                activeTab === 'Error' ? "bg-yellow-50 text-yellow-600" :
                                 "bg-red-50 text-red-600"
                               )}>
                                 {finding.phase || 'GENERAL'}
@@ -421,17 +421,7 @@ export default function App() {
                 </div>
 
                 {/* Footer Action */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                  <div className="bg-amber-100 p-2 rounded-full">
-                    <Info className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <p className="text-sm text-amber-800 font-medium">
-                    Review findings below, then click Submit TEM Findings to finalize.
-                  </p>
-                  <button className="ml-auto bg-slate-900 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-slate-800 transition-all">
-                    Submit TEM Findings
-                  </button>
-                </div>
+              
               </motion.div>
             )}
           </div>
