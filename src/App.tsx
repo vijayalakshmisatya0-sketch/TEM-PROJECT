@@ -16,7 +16,10 @@ import {
   Loader2,
   ChevronRight,
   Plane,
-  Info
+  Info,
+  Monitor,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -40,6 +43,7 @@ export default function App() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [activeTab, setActiveTab] = useState<Category>('Threat');
   const [error, setError] = useState<string | null>(null);
+  const [showViewer, setShowViewer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadSampleData = async () => {
@@ -311,13 +315,22 @@ export default function App() {
               </div>
               
               {!isAnalyzing && (
-                <button 
-                  onClick={downloadAnnotated}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md shadow-emerald-100"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Annotated Doc
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setShowViewer(true)}
+                    className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md shadow-slate-100"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Open Document
+                  </button>
+                  <button 
+                    onClick={downloadAnnotated}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md shadow-emerald-100"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Annotated Doc
+                  </button>
+                </div>
               )}
             </div>
 
@@ -330,99 +343,163 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-6"
-              >
-                {/* Stats & Tabs */}
-                <div className="flex flex-wrap items-center gap-4">
-                  {[
-                    { id: 'Threat', label: 'THREATS', count: stats.Threat, color: 'blue', icon: ShieldAlert },
-                    { id: 'Error', label: 'ERRORS', count: stats.Error, color: 'yellow', icon: AlertTriangle },
-                    { id: 'UAS', label: 'UAS', count: stats.UAS, color: 'red', icon: XCircle },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as Category)}
-                      className={cn(
-                        "flex items-center gap-3 px-6 py-3 rounded-xl font-bold transition-all border-2",
-                        activeTab === tab.id 
-                          ? `bg-${tab.color}-600 border-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-100`
-                          : `bg-white border-slate-200 text-slate-600 hover:border-${tab.color}-300 hover:bg-${tab.color}-50`
-                      )}
-                    >
-                      <tab.icon className="w-5 h-5" />
-                      {tab.label}
-                      <span className={cn(
-                        "ml-2 px-2 py-0.5 rounded-md text-xs",
-                        activeTab === tab.id ? "bg-white/20" : "bg-slate-100"
-                      )}>
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Findings Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {filteredFindings.map((finding, idx) => (
-                      <motion.div
-                        key={idx}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
+              <div className={cn("grid grid-cols-1 gap-8", showViewer && "lg:grid-cols-[1fr_450px] xl:grid-cols-[1fr_550px]")}>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6"
+                >
+                  {/* Stats & Tabs */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    {[
+                      { id: 'Threat', label: 'THREATS', count: stats.Threat, color: 'blue', icon: ShieldAlert },
+                      { id: 'Error', label: 'ERRORS', count: stats.Error, color: 'yellow', icon: AlertTriangle },
+                      { id: 'UAS', label: 'UAS', count: stats.UAS, color: 'red', icon: XCircle },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as Category)}
+                        className={cn(
+                          "flex items-center gap-3 px-6 py-3 rounded-xl font-bold transition-all border-2",
+                          activeTab === tab.id 
+                            ? `bg-${tab.color}-600 border-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-100`
+                            : `bg-white border-slate-200 text-slate-600 hover:border-${tab.color}-300 hover:bg-${tab.color}-50`
+                        )}
                       >
-                        <div className="p-5 space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={cn(
-                                "text-[10px] font-bold px-2 py-1 rounded tracking-widest uppercase",
-                                activeTab === 'Threat' ? "bg-blue-50 text-blue-600" :
-                                activeTab === 'Error' ? "bg-yellow-50 text-yellow-600" :
-                                "bg-red-50 text-red-600"
-                              )}>
-                                {finding.phase || 'GENERAL'}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600">
-                                <Info className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <h4 className="font-bold text-slate-800 leading-tight">
-                              {finding.reason.split(':')[0]}
-                            </h4>
-                            <p className="text-sm text-slate-600 italic leading-relaxed bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200">
-                              "{finding.text}"
-                            </p>
-                            <div className="flex items-start gap-2 text-xs text-slate-500">
-                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-300" />
-                              <p>{finding.reason}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
+                        <tab.icon className="w-5 h-5" />
+                        {tab.label}
+                        <span className={cn(
+                          "ml-2 px-2 py-0.5 rounded-md text-xs",
+                          activeTab === tab.id ? "bg-white/20" : "bg-slate-100"
+                        )}>
+                          {tab.count}
+                        </span>
+                      </button>
                     ))}
-                  </AnimatePresence>
-                  
-                  {filteredFindings.length === 0 && (
-                    <div className="col-span-full py-12 text-center bg-white rounded-xl border border-dashed border-slate-300">
-                      <CheckCircle2 className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                      <p className="text-slate-400 font-medium">No {activeTab.toLowerCase()}s identified in this analysis.</p>
-                    </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Footer Action */}
-              
-              </motion.div>
+                  {/* Findings Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <AnimatePresence mode="popLayout">
+                      {filteredFindings.map((finding, idx) => (
+                        <motion.div
+                          key={idx}
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
+                        >
+                          <div className="p-5 space-y-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-[10px] font-bold px-2 py-1 rounded tracking-widest uppercase",
+                                  activeTab === 'Threat' ? "bg-blue-50 text-blue-600" :
+                                  activeTab === 'Error' ? "bg-yellow-50 text-yellow-600" :
+                                  "bg-red-50 text-red-600"
+                                )}>
+                                  {finding.phase || 'GENERAL'}
+                                </span>
+                              </div>
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600">
+                                  <Info className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <h4 className="font-bold text-slate-800 leading-tight">
+                                {finding.reason.split(':')[0]}
+                              </h4>
+                              <p className="text-sm text-slate-600 italic leading-relaxed bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200">
+                                "{finding.text}"
+                              </p>
+                              <div className="flex items-start gap-2 text-xs text-slate-500">
+                                <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-300" />
+                                <p>{finding.reason}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    
+                    {filteredFindings.length === 0 && (
+                      <div className="col-span-full py-12 text-center bg-white rounded-xl border border-dashed border-slate-300">
+                        <CheckCircle2 className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                        <p className="text-slate-400 font-medium">No {activeTab.toLowerCase()}s identified in this analysis.</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {showViewer && (
+                  <motion.aside 
+                    initial={{ x: 300, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col h-[700px] sticky top-8"
+                  >
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="font-bold text-sm text-slate-700 uppercase tracking-tight">Interactive Editor</span>
+                      </div>
+                      <button 
+                        onClick={() => setShowViewer(false)}
+                        className="p-2 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors flex items-center gap-2 text-xs font-bold"
+                      >
+                        <EyeOff className="w-4 h-4" />
+                        HIDE
+                      </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-8 font-serif leading-relaxed text-slate-800">
+                      <div 
+                        contentEditable 
+                        suppressContentEditableWarning
+                        className="outline-none whitespace-pre-wrap doc-view"
+                        dangerouslySetInnerHTML={{ 
+                          __html: (() => {
+                            let html = rawText.replace(/\n/g, '<br/>');
+                            const sorted = [...findings].sort((a, b) => b.text.length - a.text.length);
+                            sorted.forEach(f => {
+                              let color = 'rgba(254, 249, 195, 0.8)'; // yellow
+                              let border = 'rgba(234, 179, 8, 0.3)';
+                              if (f.category === 'Threat') {
+                                color = 'rgba(207, 250, 254, 0.8)';
+                                border = 'rgba(6, 182, 212, 0.3)';
+                              }
+                              if (f.category === 'UAS') {
+                                color = 'rgba(254, 226, 226, 0.8)';
+                                border = 'rgba(239, 68, 68, 0.3)';
+                              }
+                              
+                              const regex = new RegExp(`(${f.text})`, 'gi');
+                              html = html.replace(regex, `<span class="px-1 rounded border-b-2" style="background-color: ${color}; border-color: ${border};">$1</span>`);
+                            });
+                            return html;
+                          })()
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl flex items-center justify-between">
+                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+                        Rich Text Mode • Visual Evidence Active
+                      </p>
+                      <button 
+                         onClick={downloadAnnotated}
+                         className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                         <Download className="w-3 h-3" />
+                         Sync to Word
+                      </button>
+                    </div>
+                  </motion.aside>
+                )}
+              </div>
             )}
           </div>
         )}
