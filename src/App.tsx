@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Upload, 
@@ -19,10 +19,23 @@ import {
   Info,
   Monitor,
   Eye,
-  EyeOff
+  EyeOff,
+  Bold,
+  Italic,
+  Underline,
+  Type as FontType,
+  Palette,
+  Save,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Color from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Highlight from '@tiptap/extension-highlight';
 
 // Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -44,7 +57,56 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Category>('Threat');
   const [error, setError] = useState<string | null>(null);
   const [showViewer, setShowViewer] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+    ],
+    content: '',
+    onUpdate: ({ editor }) => {
+      triggerAutoSave(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'outline-none whitespace-pre-wrap doc-view min-h-full p-10 font-serif leading-relaxed text-slate-800 bg-[#fdfdfd] cursor-text',
+      },
+    },
+  });
+
+  // Effect to populate editor when analysis is done or sample is loaded
+  useEffect(() => {
+    if (editor && rawText && findings.length > 0) {
+      let html = rawText.replace(/\n/g, '<br/>');
+      const sorted = [...findings].sort((a, b) => b.text.length - a.text.length);
+      sorted.forEach(f => {
+        let color = '#fef9c3'; // yellow
+        if (f.category === 'Threat') color = '#cffafe';
+        if (f.category === 'UAS') color = '#fee2e2';
+        
+        const regex = new RegExp(`(${f.text})`, 'gi');
+        html = html.replace(regex, `<mark style="background-color: ${color}">$1</mark>`);
+      });
+      editor.commands.setContent(html);
+    }
+  }, [editor, rawText, findings]);
+
+  const triggerAutoSave = (html: string) => {
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    
+    setIsSaving(true);
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      console.log("Saving to backend (TipTap)...", html);
+      setLastSaved(new Date());
+      setIsSaving(false);
+    }, 2000);
+  };
 
   const loadSampleData = async () => {
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'undefined') {
@@ -196,10 +258,11 @@ export default function App() {
 
   const downloadAnnotated = async () => {
     try {
+      const contentToSave = editor ? editor.getHTML() : rawText;
       const response = await fetch('/api/generate-annotated', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: rawText, findings }),
+        body: JSON.stringify({ text: contentToSave, findings }),
       });
 
       if (!response.ok) throw new Error('Failed to generate document');
@@ -441,10 +504,28 @@ export default function App() {
                     animate={{ x: 0, opacity: 1 }}
                     className="bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col h-[700px] sticky top-8"
                   >
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-2xl">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-slate-600" />
-                        <span className="font-bold text-sm text-slate-700 uppercase tracking-tight">Interactive Editor</span>
+                    {/* Editor Header */}
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-slate-200 p-1.5 rounded-lg">
+                          <FileText className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-slate-700 uppercase tracking-tight block">Interactive Editor</span>
+                          <div className="flex items-center gap-2">
+                            {isSaving ? (
+                              <span className="flex items-center gap-1.5 text-[10px] text-blue-500 font-bold uppercase transition-all">
+                                <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Saving...
+                              </span>
+                            ) : lastSaved ? (
+                              <span className="flex items-center gap-1.5 text-[10px] text-emerald-500 font-bold uppercase transition-all">
+                                <Check className="w-2.5 h-2.5" /> Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ready to edit</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <button 
                         onClick={() => setShowViewer(false)}
@@ -454,35 +535,80 @@ export default function App() {
                         HIDE
                       </button>
                     </div>
+
+                    {/* Toolbar */}
+                    <div className="p-2 border-b border-slate-100 bg-white flex items-center gap-1 overflow-x-auto no-scrollbar">
+                      <button 
+                        onClick={() => editor?.chain().focus().toggleBold().run()} 
+                        className={cn(
+                          "p-2 rounded-lg text-slate-600 transition-colors",
+                          editor?.isActive('bold') ? "bg-slate-200 text-blue-600" : "hover:bg-slate-100"
+                        )} 
+                        title="Bold"
+                      >
+                        <Bold className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => editor?.chain().focus().toggleItalic().run()} 
+                        className={cn(
+                          "p-2 rounded-lg text-slate-600 transition-colors",
+                          editor?.isActive('italic') ? "bg-slate-200 text-blue-600" : "hover:bg-slate-100"
+                        )} 
+                        title="Italic"
+                      >
+                        <Italic className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => editor?.chain().focus().toggleStrike().run()} 
+                        className={cn(
+                          "p-2 rounded-lg text-slate-600 transition-colors",
+                          editor?.isActive('strike') ? "bg-slate-200 text-blue-600" : "hover:bg-slate-100"
+                        )} 
+                        title="Strikethrough"
+                      >
+                        <Underline className="w-4 h-4" />
+                      </button>
+                      <div className="w-px h-6 bg-slate-200 mx-1" />
+                      <button 
+                        onClick={() => editor?.chain().focus().setColor('#2563eb').run()} 
+                        className={cn(
+                          "p-2 rounded-lg text-blue-600 transition-colors",
+                          editor?.isActive('textStyle', { color: '#2563eb' }) ? "bg-blue-50" : "hover:bg-slate-100"
+                        )} 
+                        title="Blue Text"
+                      >
+                        <Palette className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => editor?.chain().focus().setColor('#dc2626').run()} 
+                        className={cn(
+                          "p-2 rounded-lg text-red-600 transition-colors",
+                          editor?.isActive('textStyle', { color: '#dc2626' }) ? "bg-red-50" : "hover:bg-slate-100"
+                        )} 
+                        title="Red Text"
+                      >
+                        <Palette className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => editor?.chain().focus().unsetColor().run()} 
+                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-900 transition-colors" 
+                        title="Reset Color"
+                      >
+                        <FontType className="w-4 h-4" />
+                      </button>
+                      <div className="ml-auto" />
+                      <button 
+                        onClick={() => editor && triggerAutoSave(editor.getHTML())} 
+                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-500 transition-colors" 
+                        title="Force Save"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                    </div>
                     
-                    <div className="flex-1 overflow-y-auto p-8 font-serif leading-relaxed text-slate-800">
-                      <div 
-                        contentEditable 
-                        suppressContentEditableWarning
-                        className="outline-none whitespace-pre-wrap doc-view"
-                        dangerouslySetInnerHTML={{ 
-                          __html: (() => {
-                            let html = rawText.replace(/\n/g, '<br/>');
-                            const sorted = [...findings].sort((a, b) => b.text.length - a.text.length);
-                            sorted.forEach(f => {
-                              let color = 'rgba(254, 249, 195, 0.8)'; // yellow
-                              let border = 'rgba(234, 179, 8, 0.3)';
-                              if (f.category === 'Threat') {
-                                color = 'rgba(207, 250, 254, 0.8)';
-                                border = 'rgba(6, 182, 212, 0.3)';
-                              }
-                              if (f.category === 'UAS') {
-                                color = 'rgba(254, 226, 226, 0.8)';
-                                border = 'rgba(239, 68, 68, 0.3)';
-                              }
-                              
-                              const regex = new RegExp(`(${f.text})`, 'gi');
-                              html = html.replace(regex, `<span class="px-1 rounded border-b-2" style="background-color: ${color}; border-color: ${border};">$1</span>`);
-                            });
-                            return html;
-                          })()
-                        }}
-                      />
+                    {/* Editor Content */}
+                    <div className="flex-1 overflow-y-auto">
+                      <EditorContent editor={editor} />
                     </div>
                     
                     <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl flex items-center justify-between">
@@ -491,9 +617,9 @@ export default function App() {
                       </p>
                       <button 
                          onClick={downloadAnnotated}
-                         className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                         className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-colors"
                       >
-                         <Download className="w-3 h-3" />
+                         <Download className="w-3.5 h-3.5" />
                          Sync to Word
                       </button>
                     </div>
